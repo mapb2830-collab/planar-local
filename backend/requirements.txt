@@ -1,0 +1,10 @@
+fastapi==0.162.2
+uvicorn>=0.34,<1
+python-multipart>=0.0.20,<1
+trimesh==5.2.0
+ezdxf==1.4.5
+shapely==2.2.0
+pyclipper==1.4.0
+numpy>=2.2,<3
+rhino3dm>=8.17,<9
+reportlab>=4.4,<5

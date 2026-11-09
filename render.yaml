@@ -1,0 +1,40 @@
+# Paid single-instance service required for persistent disk and CAD memory.
+# Review the provider's quoted cost before creating this service.
+services:
+  - type: web
+    name: planar-studio-api
+    runtime: python
+    plan: standard
+    region: virginia
+    rootDir: backend
+    buildCommand: pip install -r requirements-production-lock.txt
+    startCommand: python -m uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --limit-concurrency 16 --no-access-log --log-level info
+    healthCheckPath: /api/health
+    autoDeployTrigger: checksPass
+    disk:
+      name: planar-storage
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: PLANAR_MODE
+        value: cloud
+      - key: PAYMENTS_MODE
+        value: disabled
+      - key: STORAGE_PATH
+        value: /var/data/planar
+      - key: OWNER_EMAIL
+        value: marcos.pacheco@cun.edu.co
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: OPENBLAS_NUM_THREADS
+        value: '1'
+      - key: OMP_NUM_THREADS
+        value: '1'

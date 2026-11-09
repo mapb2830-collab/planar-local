@@ -3,6 +3,8 @@
 Estudio de arquitectura para importar modelos, preparar paneles y exportar archivos de corte.
 React 19 + Vite + TypeScript, visor Three.js y motor Python/FastAPI.
 
+**[Ver cómo quedó la interfaz: capturas del estudio, acceso y móvil](docs/VISTA_PREVIA.md).**
+
 La versión 0.2 conserva el motor original y añade una interfaz responsive, biblioteca privada,
 historial persistente, cuentas Supabase verificadas, roles y administración. **Los pagos reales
 están desactivados.** Las simulaciones administrativas nunca conceden créditos pagados ni

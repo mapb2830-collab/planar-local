@@ -2,21 +2,39 @@ import {useState} from 'react'
 import {ArrowUpRight, ArrowRight, Layers3, ScanLine, Box, Eye, EyeOff} from 'lucide-react'
 import {Brand} from './Brand'
 import type {User} from '../types'
-export function Login({onLogin}:{onLogin:(user:User)=>void}) {
+import {supabase} from '../auth'
+export function Login({onLogin,cloud=false,onPrices,initialError=''}:{onLogin:(user:User)=>void;cloud?:boolean;onPrices?:()=>void;initialError?:string}) {
   const [register,setRegister]=useState(false), [show,setShow]=useState(false)
   const [email,setEmail]=useState(''), [name,setName]=useState(''), [password,setPassword]=useState('')
-  function enter(e:React.FormEvent) {e.preventDefault(); onLogin({name:register?name:email.split('@')[0],email})}
+  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
+  async function enter(e:React.FormEvent) {
+    e.preventDefault();setError('');setNotice('')
+    if(!cloud){onLogin({name:register?name:email.split('@')[0],email});return}
+    if(!supabase){setError('La autenticación todavía no está configurada.');return}
+    setBusy(true)
+    try {
+      const result=register?await supabase.auth.signUp({email,password,options:{data:{name},emailRedirectTo:window.location.origin+'/studio'}}):await supabase.auth.signInWithPassword({email,password})
+      if(result.error)throw result.error
+      if(register)setNotice('Revisa tu correo y confirma tu cuenta antes de iniciar sesión.')
+    }catch(error){setError(error instanceof Error?error.message:'No se pudo iniciar sesión.')}finally{setBusy(false)}
+  }
+  async function reset(){
+    if(!email){setError('Escribe tu correo para recuperar la contraseña.');return}
+    if(!supabase){setError('La autenticación todavía no está configurada.');return}
+    setBusy(true);setError('')
+    const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+'/reset-password'})
+    setBusy(false);if(error)setError(error.message);else setNotice('Si la cuenta existe, recibirás un enlace para cambiar tu contraseña.')
+  }
   return <div className="login-page"><section className="login-form-side"><Brand/>
     <div className="login-form-wrap"><div className="eyebrow"><span className="status-dot"/> TU ESTUDIO DE FABRICACIÓN</div>
       <h1>Las buenas ideas<br/>toman <em>forma.</em></h1><p className="login-subtitle">Del modelo digital a tu próxima maqueta.<br/>Un espacio para diseñar, desplegar y fabricar.</p>
       <div className="auth-tabs"><button className={!register?'active':''} onClick={()=>setRegister(false)}>Iniciar sesión</button><button className={register?'active':''} onClick={()=>setRegister(true)}>Crear cuenta</button></div>
       <form onSubmit={enter}>{register&&<label>Nombre<input required autoComplete="name" placeholder="Tu nombre" value={name} onChange={e=>setName(e.target.value)}/></label>}
       <label>Correo electrónico<input type="email" required autoComplete="email" placeholder="nombre@universidad.edu" value={email} onChange={e=>setEmail(e.target.value)}/></label>
-      <label>Contraseña<div className="password-field"><input required minLength={6} type={show?'text':'password'} autoComplete={register?'new-password':'current-password'} placeholder="Al menos 6 caracteres" value={password} onChange={e=>setPassword(e.target.value)}/><button type="button" className="icon-button" aria-label={show?'Ocultar contraseña':'Mostrar contraseña'} onClick={()=>setShow(!show)}>{show?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>
-      <button className="primary auth-submit" type="submit">{register?'Crear mi espacio':'Entrar al estudio'}<ArrowRight size={18}/></button></form>
-      <div className="or"><span/>o explora primero<span/></div><button className="demo-login" onClick={()=>onLogin({name:'Estudiante',email:'demo@planar.local'})}>Acceder a la demo<ArrowUpRight size={16}/></button>
-      <p className="auth-note">Acceso de demostración. No se crea una cuenta real<br/>ni se guarda tu contraseña.</p>
-    </div><footer>DISEÑADO PARA PENSAR CON LAS MANOS.<span>V 0.1 / LOCAL</span></footer>
+      <label>Contraseña<div className="password-field"><input required minLength={cloud?12:6} type={show?'text':'password'} autoComplete={register?'new-password':'current-password'} placeholder={cloud?"Al menos 12 caracteres":"Al menos 6 caracteres"} value={password} onChange={e=>setPassword(e.target.value)}/><button type="button" className="icon-button" aria-label={show?'Ocultar contraseña':'Mostrar contraseña'} onClick={()=>setShow(!show)}>{show?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>
+      {(error||initialError)&&<p className="auth-error" role="alert">{error||initialError}</p>}{notice&&<p className="auth-notice" role="status">{notice}</p>}<button disabled={busy||(cloud&&!supabase)} className="primary auth-submit" type="submit">{register?'Crear mi espacio':'Entrar al estudio'}<ArrowRight size={18}/></button></form>
+      {cloud?<><button disabled={busy} className="forgot-password" onClick={reset}>¿Olvidaste tu contraseña?</button><button className="demo-login" onClick={onPrices}>Explorar los planes<ArrowUpRight size={16}/></button><p className="auth-note">Cuenta con correo verificado · 5 créditos gratuitos de bienvenida.<br/>Beta sin cobros ni tarjeta de crédito.</p>{!supabase&&<p className="auth-error" role="alert">Configuración de autenticación pendiente.</p>}</>:<><div className="or"><span/>o explora primero<span/></div><button className="demo-login" onClick={()=>onLogin({name:'Estudiante',email:'demo@planar.local'})}>Acceder a la demo<ArrowUpRight size={16}/></button><p className="auth-note">Modo local sin cuentas reales. Tus archivos se procesan en este equipo.</p></>}
+    </div><footer>DISEÑADO PARA PENSAR CON LAS MANOS.<span>V 0.2 / {cloud?'CLOUD BETA':'LOCAL'}</span></footer>
     </section><section className="login-art"><div className="art-top"><span>EXPLORACIÓN N.º 001</span><span>ESTUDIO DE PLANOS / 2026</span></div>
       <div className="art-title">Una idea.<br/>Infinitas <span>posibilidades.</span></div>
       <svg className="architecture-drawing" viewBox="0 0 680 520" role="img" aria-label="Dibujo axonométrico de una maqueta arquitectónica desmontada"><defs><pattern id="grid" width="38" height="22" patternUnits="userSpaceOnUse" patternTransform="skewY(-30)"><path d="M38 0H0V22" fill="none" stroke="#353e32" strokeWidth="0.6"/></pattern><linearGradient id="face" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#ccdbad"/><stop offset="1" stopColor="#778668"/></linearGradient></defs>
